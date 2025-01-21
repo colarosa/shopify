@@ -1,0 +1,66 @@
+// Replace 'AW-123456789' with your Google Ads Conversion ID
+// Replace 'conversion_label' with your Google Ads Conversion Label
+const GOOGLE_ADS_ID = 'AW-123456789';
+const CONVERSION_LABEL = 'conversion_label';
+
+// Load Google Ads tracking script
+const script = document.createElement('script');
+script.setAttribute('src', `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`);
+script.setAttribute('async', '');
+document.head.appendChild(script);
+
+window.dataLayer = window.dataLayer || [];
+
+function gtag() {
+    dataLayer.push(arguments);
+}
+
+// Initialize Google Ads tracking
+gtag('js', new Date());
+gtag('config', GOOGLE_ADS_ID, {
+    'allow_enhanced_conversions': true
+});
+
+// Subscribe to Shopify's checkout_completed event
+analytics.subscribe("checkout_completed", (event) => {
+    const checkoutData = event.data?.checkout;
+    if (checkoutData) {
+        // Enhanced Conversion User Data
+        const userData = {
+            email: checkoutData.email,
+            phone_number: checkoutData.billingAddress?.phone,
+            address: {
+                first_name: checkoutData.billingAddress?.firstName,
+                last_name: checkoutData.billingAddress?.lastName,
+                street: checkoutData.billingAddress?.address1,
+                city: checkoutData.billingAddress?.city,
+                region: checkoutData.billingAddress?.provinceCode,
+                country: checkoutData.billingAddress?.country,
+                postal_code: checkoutData.billingAddress?.zip
+            }
+        };
+
+        // Purchase Data
+        const purchaseData = {
+            transaction_id: checkoutData.order?.id,
+            value: checkoutData.totalPrice?.amount,
+            currency: checkoutData.currencyCode
+        };
+
+        // Set Enhanced Conversions user data
+        gtag('set', 'user_data', userData);
+
+        // Send conversion event with purchase details
+        gtag('event', 'conversion', {
+            send_to: `${GOOGLE_ADS_ID}/${CONVERSION_LABEL}`,
+            ...purchaseData
+        });
+
+        // Optionally push event data to the dataLayer
+        dataLayer.push({
+            event: 'purchase',
+            ...purchaseData,
+            user_data: userData
+        });
+    }
+});
